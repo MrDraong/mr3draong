@@ -1,22 +1,23 @@
 import * as THREE from "three";
-
+import { OutlineEffect } from 'three/addons/effects/OutlineEffect.js';
 let scene, camera, raycaster, renderer;
-let intersected;
+let intersected, clicked;
 const pointer = new THREE.Vector2();
+const clickPointer = new THREE.Vector2();
 
-init(); 
+init();
 
 function init(){
 
     // Création de la scene et lui donne un angle
     scene = new THREE.Scene();
     scene.background = new THREE.Color("skyblue");
-    scene.rotateX(0.5); 
+    scene.rotateX(0.4); 
     // Lumière de type soleil, par défaut topdown
-    const directionalLight = new THREE.DirectionalLight(0x404040, 250);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 8);
     directionalLight.position.set(-10, 10, 1);
     scene.add(directionalLight);
-    
+
     camera = new THREE.PerspectiveCamera(
       75,
       window.innerWidth / window.innerHeight,
@@ -28,18 +29,42 @@ function init(){
     
     raycaster = new THREE.Raycaster();
     
-    const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+    const cubeGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+    const smallCubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
     
     // Création d'une plateforme à partir de cubes
     for (let x = -3; x < 4; x = x + 0.5) {
       for (let z = -2; z < 3; z = z + 0.5) {
-        const cube = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({
-            color: 0x92623a,
-          }));
-        scene.add(cube);
+        const cube = new THREE.Mesh(cubeGeometry, new THREE.MeshToonMaterial({
+          color: 0x92623a,
+        }));
         cube.position.set(x, 0, z);
+        scene.add(cube);
       }
     }
+    const linkedinCube = new THREE.Mesh(smallCubeGeometry, new THREE.MeshToonMaterial({
+      color: 0x1040ff,
+    }));
+    Object.defineProperty(linkedinCube, "cubeName", {value : "linkedin"});
+    linkedinCube.position.set(-2, 0.4, 2.5);
+    linkedinCube.rotateY(0.5);
+    scene.add(linkedinCube);
+
+    const githubCube = new THREE.Mesh(smallCubeGeometry, new THREE.MeshToonMaterial({
+      color: 0x2b3137,
+    }));
+    Object.defineProperty(githubCube, "cubeName", {value : "github"});
+    githubCube.position.set(0, 0.4, 2.5);
+    githubCube.rotateY(0.5);
+    scene.add(githubCube);
+
+    const itchioCube = new THREE.Mesh(smallCubeGeometry, new THREE.MeshToonMaterial({
+      color: 0xda2c49,
+    }));
+    Object.defineProperty(itchioCube, "cubeName", {value : "itchio"});
+    itchioCube.position.set(2.5, 0.4, 2.5);
+    itchioCube.rotateY(0.5);
+    scene.add(itchioCube);
 
     // Créer le canvas à la taille du navigateur et l'ajoute dans le body
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -47,48 +72,59 @@ function init(){
     renderer.setAnimationLoop(animate);
     document.body.appendChild(renderer.domElement);
 
-    //window.addEventListener( 'pointermove', onPointerMove );
+    window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerdown', onPointerDown);
-    window.addEventListener('pointerup', onPointerUp);
 }
 
-/*function onPointerMove(event) {
+function onPointerMove(event) {
 	pointer.set((( event.clientX / window.innerWidth ) * 2 - 1), (- ( event.clientY / window.innerHeight ) * 2 + 1));
-
-}*/
-
-function onPointerDown(event) {
-    pointer.set((( event.clientX / window.innerWidth ) * 2 - 1), (- ( event.clientY / window.innerHeight ) * 2 + 1));
-    
-    // update the picking ray with the camera and pointer position
 	raycaster.setFromCamera( pointer, camera );
 
-	// calculate objects intersecting the picking ray
 	const intersects = raycaster.intersectObjects( scene.children );
 
 	if ( intersects.length > 0 ) {
 
         if ( intersected != intersects[ 0 ].object ) {
 
-            if ( intersected ) {
-                intersected.material.emissive.setHex( intersected.currentHex );
+            if (intersected) {
+              intersected.material.emissive.setHex( intersected.currentHex );
             }
-
+            
             intersected = intersects[ 0 ].object;
-            intersected.currentHex = intersected.material.emissive.getHex();
-            intersected.material.emissive.setHex( 0x00ff00 );
-
+            if(intersected?.cubeName === "linkedin" || intersected?.cubeName === "github" || intersected?.cubeName === "itchio"){
+              intersected.currentHex = intersected.material.emissive.getHex();
+              intersected.material.emissive.setHex( 0x00ff00 );
+            }         
+            
         }
 
     }
 }
 
-function onPointerUp(event) {
-    if (intersected) {
-        intersected.material.emissive.setHex( intersected.currentHex );
-    }
+function onPointerDown(event) {
+  clickPointer.set((( event.clientX / window.innerWidth ) * 2 - 1), (- ( event.clientY / window.innerHeight ) * 2 + 1));
+  
+	raycaster.setFromCamera( clickPointer, camera );
 
-    intersected = null;
+	const intersects = raycaster.intersectObjects( scene.children );
+  
+	if ( intersects.length > 0 ) {
+        if ( clicked != intersects[ 0 ].object ) {
+
+          clicked = intersects[ 0 ].object;
+            
+            if(clicked.cubeName === "linkedin") {
+              window.open("https://www.linkedin.com/in/charles-capiaux-88a501184", "Linkedin");
+            }
+            if (clicked.cubeName === "github"){
+              window.open("https://github.com/MrDraong", "Github");
+            }
+            if(clicked.cubeName === "itchio"){
+              window.open("https://mrdraong.itch.io/", "Itchio");
+            }
+        }
+
+    }
 }
 
 function animate() {
@@ -96,5 +132,6 @@ function animate() {
 }
 
 function render() {
-	renderer.render( scene, camera );
+  const effect = new OutlineEffect( renderer );
+	effect.render( scene, camera );
 }
