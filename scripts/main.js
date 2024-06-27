@@ -1,19 +1,30 @@
 import * as THREE from "three";
 import { OutlineEffect } from 'three/addons/effects/OutlineEffect.js';
-let scene, camera, raycaster, renderer;
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import { update } from "three/examples/jsm/libs/tween.module.js";
+let scene, camera, raycaster, renderer, effect;
 let intersected, clicked;
 const pointer = new THREE.Vector2();
 const clickPointer = new THREE.Vector2();
+const clock = new THREE.Clock();
+
+const fontLoader = new FontLoader();
+
+let currentTile = 0, offsetX = 0, elapsedTime = 0, slimeAnimationDuration = 1.5;
+let spriteMap, displayTime;
+const horizontalSize = 5, verticalSize = 1;
+
 
 init();
 
 function init(){
 
-    // Création de la scene et lui donne un angle
+    // Create scene with some angle
     scene = new THREE.Scene();
-    scene.background = new THREE.Color("skyblue");
-    scene.rotateX(0.4); 
-    // Lumière de type soleil, par défaut topdown
+    scene.background = new THREE.Color(0xF7EDB9);
+
+    // Sunlight effect
     const directionalLight = new THREE.DirectionalLight(0xffffff, 8);
     directionalLight.position.set(-10, 10, 1);
     scene.add(directionalLight);
@@ -29,24 +40,13 @@ function init(){
     
     raycaster = new THREE.Raycaster();
     
-    const cubeGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
     const smallCubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
     
-    // Création d'une plateforme à partir de cubes
-    for (let x = -3; x < 4; x = x + 0.5) {
-      for (let z = -2; z < 3; z = z + 0.5) {
-        const cube = new THREE.Mesh(cubeGeometry, new THREE.MeshToonMaterial({
-          color: 0x92623a,
-        }));
-        cube.position.set(x, 0, z);
-        scene.add(cube);
-      }
-    }
     const linkedinCube = new THREE.Mesh(smallCubeGeometry, new THREE.MeshToonMaterial({
-      color: 0x1040ff,
+      color: 0x0a66c2,
     }));
     Object.defineProperty(linkedinCube, "cubeName", {value : "linkedin"});
-    linkedinCube.position.set(-2, 0.4, 2.5);
+    linkedinCube.position.set(2.5, -1.4, 2.5);
     linkedinCube.rotateY(0.5);
     scene.add(linkedinCube);
 
@@ -54,26 +54,83 @@ function init(){
       color: 0x2b3137,
     }));
     Object.defineProperty(githubCube, "cubeName", {value : "github"});
-    githubCube.position.set(0, 0.4, 2.5);
+    githubCube.position.set(0, -1.4, 2.5);
     githubCube.rotateY(0.5);
     scene.add(githubCube);
-
-    const itchioCube = new THREE.Mesh(smallCubeGeometry, new THREE.MeshToonMaterial({
-      color: 0xda2c49,
-    }));
-    Object.defineProperty(itchioCube, "cubeName", {value : "itchio"});
-    itchioCube.position.set(2.5, 0.4, 2.5);
-    itchioCube.rotateY(0.5);
-    scene.add(itchioCube);
-
-    // Créer le canvas à la taille du navigateur et l'ajoute dans le body
+    
+    createText();
+    createSlime();
+    // Create canvas inside the body
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setAnimationLoop(animate);
     document.body.appendChild(renderer.domElement);
+    // Adding a cartoon effect with outline on objects borders
+    effect = new OutlineEffect( renderer );
 
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener( 'resize', onWindowResize );
+}
+
+function createText(){
+  fontLoader.load( 'assets/fonts/helvetiker_regular.typeface.json', function(font) {
+
+    const textGeometry = new TextGeometry( 'MrDraong', {
+      font: font,
+      size: 5,
+      depth: 0,
+      curveSegments: 10,
+      bevelEnabled: true,
+      bevelThickness: 0.25,
+      bevelSize: 0.1,
+      bevelOffset: 0,
+      bevelSegments: 3
+    });
+    const textMesh = new THREE.Mesh(textGeometry, 
+      new THREE.MeshBasicMaterial( { color: 0x5DA399 } )
+    );
+    textGeometry.center();
+    textMesh.position.setZ(-10);
+    scene.add(textMesh);
+  });
+}
+
+function createSlime() {
+  offsetX = (currentTile % horizontalSize) / horizontalSize;
+
+  spriteMap = new THREE.TextureLoader().load('assets/textures/purple_slime.png',() => {
+    const material = new THREE.SpriteMaterial( { map: spriteMap, color: 0xffffff } );
+    const slimeSprite = new THREE.Sprite(material);
+    Object.defineProperty(slimeSprite, "cubeName", {value : "itchio"});
+    slimeSprite.scale.set(0.5, 0.5, 1)
+    slimeSprite.position.set(-2, -1.4, 2.5);
+    scene.add(slimeSprite);
+  });
+
+  spriteMap.magFilter = THREE.NearestFilter;
+  spriteMap.repeat.set(1 / horizontalSize, 1 / verticalSize);
+  spriteMap.offset.x = offsetX;
+  
+  displayTime = slimeAnimationDuration / horizontalSize;
+}
+
+function updateSlime() {
+  elapsedTime += clock.getDelta();
+  if(displayTime > 0 && elapsedTime >= displayTime){
+    elapsedTime = 0;
+    currentTile = (currentTile + 1) % horizontalSize;
+    offsetX = (currentTile % horizontalSize) / horizontalSize;
+    spriteMap.offset.x = offsetX;
+  }
+}
+
+function onWindowResize() {
+
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
 function onPointerMove(event) {
@@ -82,23 +139,31 @@ function onPointerMove(event) {
 
 	const intersects = raycaster.intersectObjects( scene.children );
 
-	if ( intersects.length > 0 ) {
+	if (intersects.length > 0) {
 
-        if ( intersected != intersects[ 0 ].object ) {
-
-            if (intersected) {
-              intersected.material.emissive.setHex( intersected.currentHex );
-            }
-            
-            intersected = intersects[ 0 ].object;
-            if(intersected?.cubeName === "linkedin" || intersected?.cubeName === "github" || intersected?.cubeName === "itchio"){
-              intersected.currentHex = intersected.material.emissive.getHex();
-              intersected.material.emissive.setHex( 0x00ff00 );
-            }         
-            
-        }
-
+    if (intersected) {
+      intersected.material.emissive?.setHex(intersected.currentHex);
     }
+    if (intersected != intersects[0].object) {
+      intersected = intersects[0].object;
+    }
+            
+    if(intersected?.cubeName === "linkedin" || intersected?.cubeName === "github") {
+      intersected.currentHex = intersected.material.emissive.getHex();
+      intersected.material.emissive.setHex(0x79d2e6);
+    }
+    else if (intersected?.cubeName === "itchio") {
+      intersected.material.color.set("#79d2e6");
+    }  
+  }
+  else if (intersected) {
+    if(intersected?.cubeName === "linkedin" || intersected?.cubeName === "github") {
+      intersected.material.emissive?.setHex(intersected.currentHex);
+    }
+    else if (intersected?.cubeName === "itchio") {
+      intersected.material.color.set("#fff");
+    }
+  }
 }
 
 function onPointerDown(event) {
@@ -112,26 +177,28 @@ function onPointerDown(event) {
         if ( clicked != intersects[ 0 ].object ) {
 
           clicked = intersects[ 0 ].object;
-            
-            if(clicked.cubeName === "linkedin") {
-              window.open("https://www.linkedin.com/in/charles-capiaux-88a501184", "Linkedin");
+            switch(clicked.cubeName){
+              case "linkedin" :
+                window.open("https://www.linkedin.com/in/charles-capiaux-88a501184", "Linkedin");
+                break;
+              case "github" :
+                window.open("https://github.com/MrDraong", "Github");
+                break;
+              
+              case "itchio" :
+                window.open("https://mrdraong.itch.io/", "Itchio");
             }
-            if (clicked.cubeName === "github"){
-              window.open("https://github.com/MrDraong", "Github");
-            }
-            if(clicked.cubeName === "itchio"){
-              window.open("https://mrdraong.itch.io/", "Itchio");
-            }
+          
         }
 
     }
 }
 
 function animate() {
-  render()
+  updateSlime();
+  render();
 }
 
 function render() {
-  const effect = new OutlineEffect( renderer );
-	effect.render( scene, camera );
+	effect.render(scene, camera);
 }
