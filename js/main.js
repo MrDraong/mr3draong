@@ -63,7 +63,7 @@ function init() {
 
 function createCubes() {
   const cubeGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
-  const linkedinTexture = textureLoader.load("assets/textures/linkedin.png");
+  const linkedinTexture = textureLoader.load("/textures/linkedin.png");
 
   linkedinCube = new THREE.Mesh(cubeGeometry, [
     new THREE.MeshToonMaterial({
@@ -103,35 +103,32 @@ function createCubes() {
 }
 
 function createText() {
-  fontLoader.load(
-    "assets/fonts/helvetiker_regular.typeface.json",
-    function (font) {
-      const textGeometry = new TextGeometry("MrDraong", {
-        font: font,
-        size: 5,
-        depth: 0,
-        curveSegments: 10,
-        bevelEnabled: true,
-        bevelThickness: 0.25,
-        bevelSize: 0.1,
-        bevelOffset: 0,
-        bevelSegments: 3,
-      });
-      const textMesh = new THREE.Mesh(
-        textGeometry,
-        new THREE.MeshBasicMaterial({ color: 0x5da399 })
-      );
-      textGeometry.center();
-      textMesh.position.setZ(-10);
-      scene.add(textMesh);
-    }
-  );
+  fontLoader.load("/fonts/helvetiker_regular.typeface.json", function (font) {
+    const textGeometry = new TextGeometry("MrDraong", {
+      font: font,
+      size: 5,
+      depth: 0,
+      curveSegments: 10,
+      bevelEnabled: true,
+      bevelThickness: 0.25,
+      bevelSize: 0.1,
+      bevelOffset: 0,
+      bevelSegments: 3,
+    });
+    const textMesh = new THREE.Mesh(
+      textGeometry,
+      new THREE.MeshBasicMaterial({ color: 0x5da399 })
+    );
+    textGeometry.center();
+    textMesh.position.setZ(-10);
+    scene.add(textMesh);
+  });
 }
 
 function createSlime() {
   offsetX = (currentTile % horizontalSize) / horizontalSize;
 
-  spriteMap = textureLoader.load("assets/textures/purple_slime.png", () => {
+  spriteMap = textureLoader.load("/textures/purple_slime.png", () => {
     const material = new THREE.SpriteMaterial({
       map: spriteMap,
       color: 0xffffff,

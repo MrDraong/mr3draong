@@ -1,7 +1,8 @@
 {
   "scripts": {
     "dev": "npx vite",
-    "build": "npx vite build"
+    "build": "npx vite build --emptyOutDir",
+    "preview": "npx vite preview"
   },
   "dependencies": {
     "three": "^0.165.0",
